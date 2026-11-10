@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>生物计算器</title>
+<style>
+:root{
+  --teal:#00A1D5;
+  --teal-dark:#0089b8;
+  --teal-soft:#e8f7fc;
+  --line:#eceef1;
+  --text:#1c1c1e;
+  --muted:#9aa0a6;
+  --bg:#f7f8fa;
+  --radius:14px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:-apple-system,"SF Pro SC","PingFang SC","Helvetica Neue",sans-serif;
+  background:var(--bg);color:var(--text);
+  font-size:16px;line-height:1.45;
+  padding-bottom:calc(78px + env(safe-area-inset-bottom));
+  -webkit-text-size-adjust:100%;
+}
+.nav{
+  position:fixed;top:0;left:0;right:0;z-index:20;background:#fff;
+  padding:calc(6px + env(safe-area-inset-top)) 16px 10px;
+  border-bottom:1px solid var(--line);
+  text-align:center;
+}
+.nav-title{font-size:17px;font-weight:600;}
+.view{display:none;padding:calc(62px + env(safe-area-inset-top)) 14px 0;}
+.view.active{display:block;}
+
+/* 顶部工具条 */
+.toolbar{
+  background:#fff;border-radius:var(--radius);padding:12px;
+  box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:12px;
+}
+.name-input{
+  width:100%;border:1px solid var(--line);background:#f7f8fa;
+  border-radius:10px;padding:11px 12px;font-size:15px;color:var(--text);
+  outline:none;font-family:inherit;
+}
+.name-input:focus{border-color:var(--teal);background:#fff;}
+.toolbar-btns{display:flex;gap:8px;margin-top:10px;}
+.btn-sm{
+  flex:1;border:none;border-radius:10px;padding:10px 0;
+  font-size:14px;font-weight:600;background:var(--teal);color:#fff;font-family:inherit;
+}
+.btn-sm:active{background:var(--teal-dark);}
+.btn-sm.ghost{background:var(--teal-soft);color:var(--teal-dark);}
+
+/* 卡片 */
+.card{
+  background:#fff;border-radius:var(--radius);margin-bottom:12px;
+  box-shadow:0 1px 3px rgba(0,0,0,.04);overflow:hidden;
+}
+.row{
+  display:flex;align-items:center;gap:8px;padding:12px 14px;
+  border-bottom:1px solid var(--line);
+}
+.row label{flex:1;font-size:15px;}
+.unit{font-size:14px;color:var(--muted);white-space:nowrap;}
+.unit b{color:var(--teal-dark);font-weight:600;}
+input.num{
+  width:110px;text-align:right;border:none;outline:none;background:transparent;
+  font-size:15px;color:var(--text);font-family:inherit;
+  padding:2px 0;
+}
+input.num::placeholder{color:var(--muted);font-size:14px;}
+input.num:focus{background:#f2fbfe;border-radius:6px;}
+
+/* 快捷孔数 */
+.quick{display:flex;gap:8px;padding:10px 14px 12px;}
+.quick button{
+  flex:1;border:1px solid var(--line);background:#fff;color:#555;
+  border-radius:9px;padding:7px 0;font-size:14px;font-family:inherit;
+}
+.quick button:active{background:var(--teal-soft);border-color:var(--teal);color:var(--teal-dark);}
+
+/* 单选行 */
+.radio-line{display:flex;justify-content:space-between;padding:10px 14px 12px;gap:4px;}
+.radio-line label{
+  flex:1;display:flex;align-items:center;justify-content:center;gap:5px;
+  font-size:14px;color:var(--muted);cursor:pointer;
+}
+.radio-line input{appearance:none;-webkit-appearance:none;width:16px;height:16px;margin:0;
+  border:1.5px solid #c8ccd1;border-radius:50%;position:relative;flex:none;}
+.radio-line input:checked{border-color:var(--teal);}
+.radio-line input:checked::after{
+  content:"";position:absolute;inset:2.5px;border-radius:50%;background:var(--teal);
+}
+.radio-line label:has(input:checked){color:var(--teal);font-weight:600;}
+
+/* 主按钮 */
+.actions{display:flex;gap:10px;margin-bottom:12px;}
+.btn{
+  flex:1;border-radius:12px;padding:14px 0;font-size:16px;font-weight:600;
+  font-family:inherit;border:1.5px solid transparent;
+}
+.btn.primary{background:var(--teal);color:#fff;flex:1.6;}
+.btn.primary:active{background:var(--teal-dark);}
+.btn.ghost{background:#fff;color:var(--teal-dark);border-color:var(--teal);}
+
+/* 结果 */
+.result{
+  background:var(--teal-soft);border-radius:var(--radius);padding:14px;
+  margin-bottom:14px;min-height:76px;
+}
+.res-placeholder{color:#8aa7b3;font-size:14px;}
+.res-item{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;}
+.res-item .k{font-size:15px;color:#3d6a7d;}
+.res-item .v{font-size:17px;font-weight:700;color:#04566f;font-variant-numeric:tabular-nums;}
+.res-item .v small{font-size:13px;font-weight:500;margin-left:4px;color:#3d6a7d;}
+.res-note{font-size:12.5px;color:#5a7f8f;margin-top:8px;padding-top:8px;border-top:1px dashed #bfe0eb;line-height:1.5;}
+.res-err{color:#c0392b;font-size:14px;}
+
+/* 历史 */
+.history-wrap{margin:4px 0 20px;}
+.sec-head{display:flex;justify-content:space-between;align-items:center;
+  padding:0 4px 8px;font-size:13px;color:#6b7075;font-weight:600;}
+.history{display:flex;flex-direction:column;gap:8px;}
+.hitem{
+  background:#fff;border-radius:12px;padding:11px 13px;font-size:13.5px;
+  box-shadow:0 1px 2px rgba(0,0,0,.04);position:relative;
+}
+.hitem .htop{display:flex;justify-content:space-between;gap:8px;margin-bottom:5px;}
+.hitem .hname{font-weight:600;color:var(--text);}
+.hitem .htime{color:var(--muted);font-size:12px;white-space:nowrap;}
+.hitem .hbody{color:#5f666d;line-height:1.6;font-variant-numeric:tabular-nums;}
+.hitem .hbody b{color:#04566f;}
+.hitem .hdel{
+  position:absolute;right:8px;bottom:8px;border:none;background:transparent;
+  color:#c0c4c8;font-size:12px;font-family:inherit;padding:4px;
+}
+.empty{color:var(--muted);font-size:13px;padding:10px 4px;}
+
+/* 底部 tab */
+.tabbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;
+  display:flex;border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.tab{
+  flex:1;border:none;background:transparent;padding:7px 0 8px;
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  font-size:11px;color:var(--muted);font-family:inherit;
+}
+.tab svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.6;}
+.tab.active{color:#34C759;}
+
+.toast{
+  position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));
+  transform:translate(-50%,12px);background:rgba(30,35,40,.88);color:#fff;
+  padding:9px 16px;border-radius:20px;font-size:13.5px;opacity:0;
+  pointer-events:none;transition:.25s;z-index:99;white-space:nowrap;
+}
+.toast.show{opacity:1;transform:translate(-50%,0);}
+
+/* 分段控件 */
+.seg{
+  display:flex;background:#e9ebee;border-radius:11px;padding:3px;margin-bottom:12px;
+}
+.seg-btn{
+  flex:1;border:none;background:transparent;border-radius:9px;padding:9px 0;
+  font-size:14.5px;font-weight:600;color:#70757a;font-family:inherit;transition:background .18s,color .18s;
+}
+.seg-btn.active{background:#fff;color:var(--teal-dark);box-shadow:0 1px 3px rgba(0,0,0,.08);}
+.tab span{font-size:10.5px;}
+
+/* 说明按钮 */
+.info{
+  flex:none;width:17px;height:17px;padding:0;border-radius:50%;
+  border:1.3px solid #c3c8ce;background:transparent;color:#9aa0a6;
+  font-size:11px;font-weight:700;font-style:italic;line-height:1;
+  font-family:Georgia,serif;display:flex;align-items:center;justify-content:center;
+}
+.info:active{background:var(--teal-soft);border-color:var(--teal);color:var(--teal-dark);}
+.res-item .info{margin-left:5px;vert-align:middle;}
+
+/* 底部说明弹层 */
+.mask{
+  position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.38);
+  display:none;align-items:flex-end;
+}
+.mask.show{display:flex;}
+.sheet{
+  width:100%;max-height:80vh;background:#fff;
+  border-radius:18px 18px 0 0;display:flex;flex-direction:column;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+
+.sheet-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 18px 10px;border-bottom:1px solid var(--line);
+  font-size:16px;font-weight:600;
+}
+.sheet-head button{
+  border:none;background:transparent;color:var(--teal-dark);
+  font-size:15px;font-family:inherit;padding:4px 0 4px 12px;font-weight:500;
+}
+.sheet-body{padding:14px 18px 22px;overflow:auto;font-size:14.5px;line-height:1.62;color:#3a3f45;}
+.sheet-body p{margin:0 0 10px;}
+.sheet-body .fml{
+  background:var(--teal-soft);border-radius:10px;padding:11px 13px;margin:2px 0 12px;
+  color:#04566f;font-weight:600;text-align:center;font-size:15px;
+}
+.sheet-body ul{margin:0 0 10px;padding-left:18px;}
+.sheet-body li{margin-bottom:4px;}
+.sheet-body b{color:#1c1c1e;}
+.sheet-body .muted-line{color:#7b8288;font-size:13.5px;}
+
+/* 稀释方案步骤 */
+.plan{background:#fff;border-radius:12px;padding:13px 14px;box-shadow:0 1px 2px rgba(0,0,0,.04);}
+.plan-head{font-size:12.5px;color:#5a7f8f;font-weight:600;margin-bottom:6px;}
+.plan-step{display:flex;gap:9px;padding:8px 0;border-top:1px dashed #d6e8f0;}
+.plan-step:first-of-type{border-top:none;padding-top:2px;}
+.plan-step .n{
+  flex:none;width:18px;height:18px;border-radius:50%;background:var(--teal);color:#fff;
+  font-size:11.5px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px;
+}
+.plan-step .tx{font-size:14px;line-height:1.55;color:#1f3f4b;}
+input.num.short{width:58px;}
+.hplan{margin-top:8px;padding-top:8px;border-top:1px dashed #eceef1;font-size:12.8px;color:#5f666d;line-height:1.65;}
+.hplan .hn{
+  display:inline-block;min-width:15px;height:15px;line-height:15px;text-align:center;
+  background:var(--teal-soft);color:var(--teal-dark);border-radius:50%;font-size:10.5px;
+  font-weight:700;margin-right:5px;
+}
+
+/* 分享 */
+.share-link{
+  border:none;background:transparent;color:var(--teal-dark);
+  font-size:12.5px;font-weight:600;font-family:inherit;padding:2px 4px;
+}
+.plan-head{display:flex;align-items:center;justify-content:space-between;}
+.share-box{
+  width:100%;border:1px solid var(--line);background:#f7f8fa;border-radius:10px;
+  padding:11px 12px;font-size:12.8px;line-height:1.65;color:#2b343a;
+  font-family:-apple-system,"PingFang SC",monospace;resize:none;
+  -webkit-appearance:none;
+}
+.share-box:focus{outline:none;border-color:var(--teal);}
+.share-actions{display:flex;gap:10px;margin-top:12px;}
+.share-actions .btn{flex:1;}
+
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-title" id="navTitle">细胞铺板</div>
+</header>
+
+<main id="viewPlating" class="view active">
+  <div class="toolbar">
+    <input id="plName" class="name-input" placeholder="计算器名称（可留空）" maxlength="24">
+    <div class="toolbar-btns">
+      <button id="plAdd" class="btn-sm">存为方案</button>
+      <button id="plResetAll" class="btn-sm ghost">重置所有</button>
+    </div>
+  </div>
+
+  <section class="card">
+    <div class="row"><label for="plVol">每个孔的体积</label><span class="unit">mL</span>
+      <input id="plVol" class="num" type="text" inputmode="decimal" placeholder="请输入数字"></div>
+    <div class="row"><label for="plWells">多少个孔</label><span class="unit">孔</span>
+      <input id="plWells" class="num" type="text" inputmode="numeric" placeholder="请输入数字"></div>
+    <div class="quick" id="plWellsQuick">
+      <button data-w="6">6</button><button data-w="12">12</button><button data-w="24">24</button>
+      <button data-w="48">48</button><button data-w="96">96</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="row"><label for="plDensity">每个孔需要细胞数</label><span class="unit">×10^<span id="plDenPow">3</span></span>
+      <input id="plDensity" class="num" type="text" inputmode="decimal" placeholder="请输入"></div>
+    <div class="radio-line" id="plDenPowGroup">
+      <label><input type="radio" name="plDen" value="3" checked><span>10^3</span></label>
+      <label><input type="radio" name="plDen" value="4"><span>10^4</span></label>
+      <label><input type="radio" name="plDen" value="5"><span>10^5</span></label>
+      <label><input type="radio" name="plDen" value="6"><span>10^6</span></label>
+      <label><input type="radio" name="plDen" value="7"><span>10^7</span></label>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="row"><label for="plStock">原液每毫升细胞数</label><span class="unit">×10^<span id="plStockPow">6</span></span>
+      <input id="plStock" class="num" type="text" inputmode="decimal" placeholder="请输入"></div>
+    <div class="radio-line" id="plStockPowGroup">
+      <label><input type="radio" name="plStock" value="3"><span>10^3</span></label>
+      <label><input type="radio" name="plStock" value="4"><span>10^4</span></label>
+      <label><input type="radio" name="plStock" value="5"><span>10^5</span></label>
+      <label><input type="radio" name="plStock" value="6" checked><span>10^6</span></label>
+      <label><input type="radio" name="plStock" value="7"><span>10^7</span></label>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="row"><label for="plExtra">富余量</label><span class="unit">%</span>
+      <input id="plExtra" class="num" type="text" inputmode="decimal" value="10" placeholder="10"></div>
+    <div class="quick" id="plExtraQuick">
+      <button data-e="0">0%</button><button data-e="5">5%</button>
+      <button data-e="10">10%</button><button data-e="20">20%</button>
+    </div>
+    <div class="row"><label>移液枪量程</label>
+      <input id="plPipMin" class="num short" type="text" inputmode="decimal" value="5">
+      <span class="unit">~</span>
+      <input id="plPipMax" class="num short" type="text" inputmode="decimal" value="1000">
+      <span class="unit">µL</span></div>
+    <div class="quick" id="plPipQuick">
+      <button data-min="2" data-max="20">2–20</button>
+      <button data-min="5" data-max="200">5–200</button>
+      <button data-min="10" data-max="1000">10–1000</button>
+      <button data-min="100" data-max="1000">100–1000</button>
+    </div>
+  </section>
+
+  <div class="actions">
+    <button id="plReset" class="btn ghost">重置</button>
+    <button id="plCalc" class="btn primary">计算</button>
+  </div>
+
+  <section class="result" id="plResult">
+    <div class="res-placeholder">填入参数后点「计算」，生成可直接照做的稀释方案</div>
+  </section>
+
+  <section class="history-wrap">
+    <div class="sec-head"><span>已存方案</span><span id="plHistCount" class="muted">0</span></div>
+    <div id="plHistory" class="history"></div>
+  </section>
+</main>
+
+<main id="viewDilution" class="view">
+  <section class="card">
+    <div class="row"><label for="dC1">原始溶液浓度</label><span class="unit" id="dC1Unit">mM</span>
+      <input id="dC1" class="num" type="text" inputmode="decimal" placeholder="请输入"></div>
+    <div class="radio-line" id="dC1Group">
+      <label><input type="radio" name="dC1" value="M"><span>M</span></label>
+      <label><input type="radio" name="dC1" value="mM" checked><span>mM</span></label>
+      <label><input type="radio" name="dC1" value="uM"><span>μM</span></label>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="row"><label for="dC2">最终需要稀释浓度</label><span class="unit" id="dC2Unit">μM</span>
+      <input id="dC2" class="num" type="text" inputmode="decimal" placeholder="请输入"></div>
+    <div class="radio-line" id="dC2Group">
+      <label><input type="radio" name="dC2" value="M"><span>M</span></label>
+      <label><input type="radio" name="dC2" value="mM"><span>mM</span></label>
+      <label><input type="radio" name="dC2" value="uM" checked><span>μM</span></label>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="row"><label for="dV1">需要溶液体积</label><span class="unit" id="dV1Unit">mL</span>
+      <input id="dV1" class="num" type="text" inputmode="decimal" placeholder="请输入"></div>
+    <div class="radio-line" id="dV1Group">
+      <label><input type="radio" name="dV1" value="L"><span>L</span></label>
+      <label><input type="radio" name="dV1" value="mL" checked><span>mL</span></label>
+      <label><input type="radio" name="dV1" value="uL"><span>μL</span></label>
+    </div>
+  </section>
+
+  <div class="actions">
+    <button id="dReset" class="btn ghost">重置</button>
+    <button id="dCalc" class="btn primary">计算</button>
+  </div>
+
+  <section class="result" id="dResult">
+    <div class="res-placeholder">填入参数后点「计算」，生成可直接照做的稀释方案</div>
+  </section>
+
+  <section class="history-wrap">
+    <div class="sec-head"><span>计算记录</span><span id="dHistCount" class="muted">0</span></div>
+    <div id="dHistory" class="history"></div>
+  </section>
+</main>
+
+<main id="viewClones" class="view">
+  <div class="seg" id="cloneSeg">
+    <button class="seg-btn active" data-mode="plan">计划接种</button>
+    <button class="seg-btn" data-mode="eff">测形成率</button>
+  </div>
+
+  <!-- 计划接种 -->
+  <div id="clonePlan">
+    <section class="card">
+      <div class="row"><label for="clTarget">目标克隆数</label><span class="unit">个/皿</span>
+        <input id="clTarget" class="num" type="text" inputmode="numeric" placeholder="如 100"></div>
+      <div class="row"><label for="clRate">预估克隆形成率</label><button class="info" data-info="rate" aria-label="克隆形成率说明">i</button><span class="unit">%</span>
+        <input id="clRate" class="num" type="text" inputmode="decimal" placeholder="如 30"></div>
+      <div class="quick" id="clRateQuick">
+        <button data-r="10">10%</button><button data-r="20">20%</button>
+        <button data-r="30">30%</button><button data-r="50">50%</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="row"><label for="clDishes">培养皿数</label><span class="unit">皿</span>
+        <input id="clDishes" class="num" type="text" inputmode="numeric" placeholder="如 3"></div>
+      <div class="row"><label for="clDishVol">每皿培养体积</label><span class="unit">mL</span>
+        <input id="clDishVol" class="num" type="text" inputmode="decimal" placeholder="如 2"></div>
+      <div class="row"><label for="clStock">原液细胞浓度</label><span class="unit">×10^<span id="clStockPow">6</span>/mL</span>
+        <input id="clStock" class="num" type="text" inputmode="decimal" placeholder="请输入"></div>
+      <div class="radio-line" id="clStockPowGroup">
+        <label><input type="radio" name="clStock" value="4"><span>10^4</span></label>
+        <label><input type="radio" name="clStock" value="5"><span>10^5</span></label>
+        <label><input type="radio" name="clStock" value="6" checked><span>10^6</span></label>
+        <label><input type="radio" name="clStock" value="7"><span>10^7</span></label>
+      </div>
+    </section>
+
+    <div class="actions">
+      <button id="clPlanReset" class="btn ghost">重置</button>
+      <button id="clPlanCalc" class="btn primary">计算</button>
+    </div>
+
+    <section class="result" id="clPlanResult">
+      <div class="res-placeholder">填入参数后点「计算」</div>
+    </section>
+  </div>
+
+  <!-- 测形成率 -->
+  <div id="cloneEff" hidden>
+    <section class="card">
+      <div class="row"><label for="ceSeed">每皿接种细胞数</label><span class="unit">×10^<span id="ceSeedPow">3</span></span>
+        <input id="ceSeed" class="num" type="text" inputmode="decimal" placeholder="如 200"></div>
+      <div class="radio-line" id="ceSeedPowGroup">
+        <label><input type="radio" name="ceSeed" value="2"><span>10^2</span></label>
+        <label><input type="radio" name="ceSeed" value="3" checked><span>10^3</span></label>
+        <label><input type="radio" name="ceSeed" value="4"><span>10^4</span></label>
+        <label><input type="radio" name="ceSeed" value="5"><span>10^5</span></label>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="row"><label for="ceCounts">实际克隆数</label><span class="unit">多个皿用逗号隔开</span>
+        <input id="ceCounts" class="num" type="text" inputmode="numeric" placeholder="如 58,63,55"></div>
+    </section>
+
+    <div class="actions">
+      <button id="ceReset" class="btn ghost">重置</button>
+      <button id="ceCalc" class="btn primary">计算</button>
+    </div>
+
+    <section class="result" id="ceResult">
+      <div class="res-placeholder">填入参数后点「计算」</div>
+    </section>
+  </div>
+
+  <section class="history-wrap">
+    <div class="sec-head"><span>计算记录</span><span id="clHistCount" class="muted">0</span></div>
+    <div id="clHistory" class="history"></div>
+  </section>
+</main>
+
+<nav class="tabbar">
+  <button class="tab active" data-view="plating">
+    <svg viewBox="0 0 24 24"><path d="M3 3h18v18H3z" opacity=".18"/><path d="M6 18V9m4 9V6m4 12v-7m4 7V8" stroke-linecap="round"/></svg>
+    <span>细胞铺板</span>
+  </button>
+  <button class="tab" data-view="dilution">
+    <svg viewBox="0 0 24 24"><path d="M9 3h6v8.6l4.2 7.4A2 2 0 0 1 17.5 22h-11a2 2 0 0 1-1.7-3L9 11.6V3z" opacity=".18"/><path d="M9 3h6v8.6l4.2 7.4A2 2 0 0 1 17.5 22h-11a2 2 0 0 1-1.7-3L9 11.6V3zM8 15h8" stroke-linejoin="round"/></svg>
+    <span>浓度稀释</span>
+  </button>
+  <button class="tab" data-view="clones">
+    <svg viewBox="0 0 24 24"><circle cx="8" cy="9" r="2.2" opacity=".18"/><circle cx="16" cy="13" r="1.6" opacity=".18"/><circle cx="11" cy="16" r="1.3" opacity=".18"/><circle cx="8" cy="9" r="2.2"/><circle cx="16" cy="13" r="1.6"/><circle cx="11" cy="16" r="1.3"/><circle cx="12" cy="11" r="9"/></svg>
+    <span>平板克隆</span>
+  </button>
+</nav>
+
+<div class="mask" id="mask" hidden>
+  <div class="sheet" id="sheet">
+    <div class="sheet-head">
+      <span id="sheetTitle"></span>
+      <button id="sheetClose">关闭</button>
+    </div>
+    <div class="sheet-body" id="sheetBody"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+<script>
+/* ============ 通用 ============ */
+const $ = (id) => document.getElementById(id);
+const STORE = 'biocalc.v1';
+
+/* 本地文件（file://）打开时浏览器通常禁用 localStorage，
+   这里用内存兜底，保证当次会话可用，并只提示一次 */
+let MEM = { plating: [], dilution: [], clones: [] };
+let storageWarned = false;
+function warnStorage() {
+  if (storageWarned) return;
+  storageWarned = true;
+  setTimeout(() => toast('本地打开：记录不会长期保存'), 700);
+}
+function loadStore() {
+  try {
+    const raw = localStorage.getItem(STORE);
+    if (raw) { MEM = JSON.parse(raw); return MEM; }
+  } catch (e) { warnStorage(); }
+  return MEM;
+}
+function saveStore(s) {
+  MEM = s;
+  try { localStorage.setItem(STORE, JSON.stringify(s)); } catch (e) { warnStorage(); }
+}
+
+/* 有效数字格式化：避免 0.30000000000000004 */
+function fmt(x, sig = 4) {
+  if (!isFinite(x)) return '—';
+  if (x === 0) return '0';
+  const a = Math.abs(x);
+  if (a >= 1e6 || a < 1e-4) {
+    const [m, e] = Number(x.toPrecision(sig)).toExponential().split('e');
+    const mant = String(parseFloat(m));
+    const ex = e.replace('+', '').replace('-', '−');
+    return `${mant}×10^${ex}`;
+  }
+  let s = Number(x.toPrecision(sig)).toString();
+  return s;
+}
+/* 体积自动选单位：≥1000 µL 显示 mL */
+function volTxt(uL, sig = 4) {
+  if (!isFinite(uL)) return '—';
+  return Math.abs(uL) >= 1000 ? `${fmt(uL / 1000, sig)}<small>mL</small>` : `${fmt(uL, sig)}<small>µL</small>`;
+}
+
+function num(el) {
+  const v = parseFloat(String(el.value).replace(/[^\d.\-eE]/g, ''));
+  return isFinite(v) ? v : NaN;
+}
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._tm);
+  t._tm = setTimeout(() => t.classList.remove('show'), 1600);
+}
+function nowStr() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/* ============ 底部 tab ============ */
+const titles = { plating: '细胞铺板', dilution: '浓度稀释', clones: '平板克隆' };
+const views = { plating: 'viewPlating', dilution: 'viewDilution', clones: 'viewClones' };
+document.querySelectorAll('.tab').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const v = btn.dataset.view;
+    document.querySelectorAll('.tab').forEach((b) => b.classList.toggle('active', b === btn));
+    Object.entries(views).forEach(([k, id]) => $(id).classList.toggle('active', k === v));
+    $('navTitle').textContent = titles[v];
+    window.scrollTo({ top: 0 });
+  });
+});
+
+/* ============ 细胞铺板 ============ */
+/* ============ 细胞铺板：稀释方案生成 ============ */
+const LADDER = [50, 80, 100, 150, 200, 250, 300, 400, 500, 600, 800, 1000,
+  1200, 1500, 2000, 2500, 3000, 4000, 5000, 6000, 8000, 10000, 12000, 15000];
+const FACTORS = [2, 5, 10, 20, 50, 100];
+
+/* 细胞浓度显示：≥10^4 用科学计数 */
+function concFmt(c) {
+  if (!isFinite(c)) return '—';
+  if (c >= 1e4) {
+    const e = Math.floor(Math.log10(c));
+    return `${fmt(c / Math.pow(10, e), 3)}×10^${e}`;
+  }
+  return fmt(c, 3);
+}
+
+/* 体积显示：≥1000 µL 用 mL */
+function volFmt(uL) {
+  if (!isFinite(uL)) return '—';
+  if (uL >= 1000) return fmt(uL / 1000, 3) + ' mL';
+  return fmt(uL, 3) + ' µL';
+}
+
+/* 枚举稀释倍数链（最多 3 级） */
+function enumerateChains(maxLen = 3) {
+  const out = [];
+  const rec = (cur, prod) => {
+    if (cur.length) out.push({ factors: cur.slice(), df: prod });
+    if (cur.length >= maxLen) return;
+    for (const f of FACTORS) {
+      const p = prod * f;
+      if (p > 2e6 || p <= prod) continue;
+      cur.push(f); rec(cur, p); cur.pop();
+    }
+  };
+  rec([], 1);
+  return out;
+}
+const CHAINS = enumerateChains(3);
+
+/* 给定稀释链与"末管需取出的量"，倒推各管体积与转移体积 */
+function planChain(factors, need, pipMin, pipMax) {
+  const cups = [];
+  let cur = need;
+  for (let j = factors.length - 1; j >= 0; j--) {
+    const d = factors[j];
+    let pick = null;
+    for (const v of LADDER) {
+      if (v < cur * 1.35) continue;
+      const t = v / d;
+      if (t < pipMin || t > pipMax) continue;
+      pick = { cup: v, take: t, d };
+      break;
+    }
+    if (!pick) return null;
+    cups.unshift(pick);
+    cur = pick.take;
+  }
+  return { cups, stockTake: cur };
+}
+
+/* 在候选方案中挑最省事、最稳的一个 */
+function choosePlan(aUL, VfUL, pipMin, pipMax) {
+  let best = null;
+
+  /* 直取原液 */
+  if (aUL >= pipMin && aUL <= VfUL) {
+    const oversized = aUL > pipMax;
+    const cost = oversized ? 40 : (aUL > 0.35 * VfUL ? 35 : 0);
+    best = { factors: [], df: 1, A: aUL, cups: [], stockTake: aUL, cost, oversized };
+  }
+
+  for (const ch of CHAINS) {
+    const A = aUL * ch.df;
+    if (!(A >= pipMin) || A > pipMax) continue;
+    if (A > VfUL * 0.35) continue;
+    const pl = planChain(ch.factors, A, pipMin, pipMax);
+    if (!pl) continue;
+
+    let cost = ch.factors.length * 100;
+    cost += Math.abs(Math.log10(A / Math.max(20, pipMin * 3))) * 18;
+    for (const c of pl.cups) {
+      cost += Math.abs(Math.log10(c.take / 50)) * 7;
+      if (c.cup > 5000) cost += (c.cup - 5000) / 1500;
+    }
+    if (!best || cost < best.cost) {
+      best = { ...pl, factors: ch.factors, df: ch.df, A, cost };
+    }
+  }
+  return best;
+}
+
+/* —— 输入读取 —— */
+function platingInputs() {
+  return {
+    C0: num($('plStock')) * Math.pow(10, checkedVal('plStock')),
+    N: num($('plWells')),
+    perWell: num($('plDensity')) * Math.pow(10, checkedVal('plDen')),
+    Vw: num($('plVol')),
+    extra: isFinite(num($('plExtra'))) ? num($('plExtra')) : 10,
+    pipMin: num($('plPipMin')) || 5,
+    pipMax: num($('plPipMax')) || 1000,
+  };
+}
+
+/* —— 主计算 —— */
+function calcPlating() {
+  const s = platingInputs();
+  const errs = [];
+  if (!(s.Vw > 0)) errs.push('每孔体积需大于 0');
+  if (!(s.N > 0)) errs.push('孔数需大于 0');
+  if (!(s.perWell > 0)) errs.push('每孔细胞数需大于 0');
+  if (!(s.C0 > 0)) errs.push('原液浓度需大于 0');
+  if (s.extra < 0 || s.extra > 100) errs.push('富余比例应在 0–100%');
+  if (!(s.pipMin > 0) || s.pipMin >= s.pipMax) errs.push('移液范围设置有误');
+  if (errs.length) return { ok: false, msg: errs.join('；') };
+
+  const T = s.perWell * s.N * (1 + s.extra / 100);   // 需细胞数（含富余）
+  const VfML = s.Vw * s.N;                           // 接种液总体积 mL
+  const VfUL = VfML * 1000;
+  const aUL = (T / s.C0) * 1000;                     // 若直取原液所需体积
+
+  if (aUL > VfUL) {
+    return {
+      ok: false,
+      msg: `原液用量 ${volFmt(aUL)} 已超过接种液总体积 ${volFmt(VfUL)}，说明原液浓度偏低。请提高原液浓度，或降低每孔细胞数/孔数。`,
+    };
+  }
+
+  const plan = choosePlan(aUL, VfUL, s.pipMin, s.pipMax);
+  if (!plan) {
+    return { ok: false, msg: '在当前移液枪范围与体积限制下找不到可操作方案，请放宽移液上限或降低细胞密度。' };
+  }
+
+  /* —— 生成文字步骤 —— */
+  const steps = [];
+  if (!plan.factors.length) {
+    steps.push(`取原液 ${volFmt(aUL)}${plan.oversized ? '（超过枪上限，用 5 mL 移液管量取）' : ''}，加完全培养基补足至 ${volFmt(VfUL)}，轻柔混匀`);
+  } else {
+    let conc = s.C0;
+    plan.cups.forEach((c, i) => {
+      conc = conc / c.d;
+      steps.push(`取${i === 0 ? '原液' : '上一步工作液'} ${volFmt(c.take)} ＋ 完全培养基 ${volFmt(c.cup - c.take)} → 混匀，得 ${volFmt(c.cup)} 工作液（稀释 ${fmt(c.d, 3)} 倍，${concFmt(conc)} /mL）`);
+    });
+    steps.push(`取工作液 ${volFmt(plan.A)} ＋ 完全培养基 ${volFmt(VfUL - plan.A)} → 混匀，共 ${volFmt(VfUL)} 接种液`);
+  }
+  steps.push(`每孔加 ${fmt(s.Vw * 1000, 4)} µL，共 ${s.N} 孔`);
+
+  /* —— 提示 —— */
+  const warns = [];
+  if (plan.oversized) warns.push('原液体积超过移液枪上限，建议用移液管或量筒量取，避免多次吸取累积误差。');
+  if (plan.A / s.pipMin < 2) warns.push(`末次取液 ${volFmt(plan.A)} 接近枪的下限，建议换 2–20 µL 小量程枪，准确度更好。`);
+  if (plan.A > 0.25 * VfUL) warns.push(`原液浓度偏低，接种液里细胞液占 ${fmt((plan.A / VfUL) * 100, 3)}%。加样时细胞沉降快，建议每加 10 孔轻柔重悬一次。`);
+  if (plan.factors.length) warns.push('预稀释液现配现用；中间液有剩余直接弃掉，不要倒回原瓶。');
+
+  return {
+    ok: true, T, VfML, VfUL, aUL, plan, steps, warns,
+    conc: T / VfML,                       // 接种液终浓度 cells/mL
+    perWell: s.perWell, N: s.N, Vw: s.Vw, extra: s.extra,
+  };
+}
+
+/* —— 渲染 —— */
+let lastPlatingResult = null;
+
+function renderPlating(r) {
+  lastPlatingResult = r.ok ? r : null;
+  if (!r.ok) {
+    $('plResult').innerHTML = `<div class="res-err">${r.msg}</div>`;
+    return;
+  }
+  const stepsHTML = r.steps.map((t, i) => `
+    <div class="plan-step">
+      <span class="n">${i + 1}</span>
+      <div class="tx">${t}</div>
+    </div>`).join('');
+
+  $('plResult').innerHTML = `
+    <div class="plan" style="margin:0 0 12px;">
+      <div class="plan-head"><span>稀释方案 · 共 ${r.steps.length} 步</span>
+        <button class="share-link" id="plShare">分享</button></div>
+      ${stepsHTML}
+    </div>
+    <div class="res-note" style="border-top:none;padding-top:0;">
+      需细胞 ${fmt(r.T, 5)} 个（含 ${fmt(r.extra, 3)}% 富余）／ 每孔 ${fmt(r.perWell, 5)} 个 × ${r.N} 孔<br>
+      ${fmt(r.Vw)} mL 接种液 × ${r.N} 孔 = ${fmt(r.VfML, 4)} mL，细胞浓度 ${concFmt(r.conc)} /mL
+      ${r.warns.length ? '<br>' + r.warns.map((w) => `<span style="color:#b06a00;">⚠ ${w}</span>`).join('<br>') : ''}
+    </div>`;
+  const btn = $('plShare');
+  if (btn) btn.addEventListener('click', () => openShare(buildPlatingText(r)));
+}
+
+/* 生成可直接发给同事的纯文本方案 */
+function buildPlatingText(r) {
+  const name = ($('plName').value || '').trim();
+  const lines = [];
+  lines.push(`【细胞铺板稀释方案】${name || '未命名'}`);
+  lines.push('');
+  lines.push(`目标：${r.N} 孔 × ${fmt(r.perWell, 6)} 个/孔，每孔 ${fmt(r.Vw)} mL`);
+  lines.push(`原液：${concFmt(num($('plStock')) * Math.pow(10, checkedVal('plStock')))} /mL　富余 ${fmt(r.extra, 3)}%　移液枪 ${fmt(num($('plPipMin')), 3)}–${fmt(num($('plPipMax')), 3)} µL`);
+  lines.push(`需细胞：${fmt(r.T, 6)} 个　接种液：${fmt(r.VfML, 4)} mL（${concFmt(r.conc)} /mL）`);
+  lines.push('');
+  r.steps.forEach((t, i) => lines.push(`${i + 1}. ${t}`));
+  if (r.warns.length) {
+    lines.push('');
+    r.warns.forEach((w) => lines.push(`⚠ ${w}`));
+  }
+  lines.push('');
+  lines.push(`—— ${nowStr()} 生物计算器`);
+  return lines.join('\n');
+}
+
+function checkedVal(name) {
+  const el = document.querySelector(`input[name="${name}"]:checked`);
+  return el ? parseInt(el.value, 10) : null;
+}
+
+/* 幂次随单选实时更新 */
+$('plDenPowGroup').addEventListener('change', () => { $('plDenPow').textContent = checkedVal('plDen'); });
+$('plStockPowGroup').addEventListener('change', () => { $('plStockPow').textContent = checkedVal('plStock'); });
+
+/* 快捷按钮 */
+$('plWellsQuick').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (b) $('plWells').value = b.dataset.w;
+});
+$('plExtraQuick').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (b) $('plExtra').value = b.dataset.e;
+});
+$('plPipQuick').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (b.dataset.min) $('plPipMin').value = b.dataset.min;
+  if (b.dataset.max) $('plPipMax').value = b.dataset.max;
+});
+
+/* ===== 计算 / 事件 ===== */
+$('plCalc').addEventListener('click', () => {
+  const r = calcPlating();
+  renderPlating(r);
+  if (r.ok) {
+    const s = platingInputs();
+    const store = loadStore();
+    store.plating.unshift({
+      t: nowStr(),
+      name: $('plName').value.trim() || '未命名方案',
+      vol: s.Vw, wells: s.N,
+      den: num($('plDensity')), denPow: checkedVal('plDen'),
+      stock: num($('plStock')), stockPow: checkedVal('plStock'),
+      extra: s.extra, pipMin: s.pipMin, pipMax: s.pipMax,
+      steps: r.steps, summary: `${fmt(r.T, 4)} 个细胞 / ${fmt(r.VfML, 3)} mL`,
+    });
+    store.plating = store.plating.slice(0, 30);
+    saveStore(store);
+    renderPlatingHistory();
+  } else {
+    toast('参数有误');
+  }
+});
+
+$('plReset').addEventListener('click', () => {
+  ['plVol', 'plWells', 'plDensity', 'plStock'].forEach((id) => { $(id).value = ''; });
+  $('plResult').innerHTML = '<div class="res-placeholder">填入参数后点「计算」</div>';
+});
+
+$('plResetAll').addEventListener('click', () => {
+  ['plName', 'plVol', 'plWells', 'plDensity', 'plStock'].forEach((id) => { $(id).value = ''; });
+  $('plExtra').value = '10';
+  $('plPipMin').value = '5';
+  $('plPipMax').value = '1000';
+  document.querySelector('input[name="plDen"][value="3"]').checked = true;
+  document.querySelector('input[name="plStock"][value="6"]').checked = true;
+  $('plDenPow').textContent = '3';
+  $('plStockPow').textContent = '6';
+  $('plResult').innerHTML = '<div class="res-placeholder">填入参数后点「计算」</div>';
+  const store = loadStore();
+  store.plating = [];
+  saveStore(store);
+  renderPlatingHistory();
+  toast('已重置');
+});
+
+/* 存为方案：只记参数，不计算 */
+$('plAdd').addEventListener('click', () => {
+  const s = platingInputs();
+  if (!s.Vw || !s.N) return toast('至少填入体积与孔数');
+  const store = loadStore();
+  store.plating.unshift({
+    t: nowStr(),
+    name: $('plName').value.trim() || '未命名方案',
+    vol: s.Vw, wells: s.N,
+    den: num($('plDensity')), denPow: checkedVal('plDen'),
+    stock: num($('plStock')), stockPow: checkedVal('plStock'),
+    extra: s.extra, pipMin: s.pipMin, pipMax: s.pipMax,
+    steps: null,
+  });
+  store.plating = store.plating.slice(0, 30);
+  saveStore(store);
+  renderPlatingHistory();
+  toast('已保存');
+});
+
+function renderPlatingHistory() {
+  const list = loadStore().plating;
+  const box = $('plHistory');
+  $('plHistCount').textContent = list.length;
+  if (!list.length) { box.innerHTML = '<div class="empty">还没有记录</div>'; return; }
+  box.innerHTML = list.map((h, i) => {
+    const params = `${fmt(h.vol, 4)} mL × ${h.wells} 孔；每孔 ${fmt(h.den, 4)}×10^${h.denPow}；原液 ${fmt(h.stock, 4)}×10^${h.stockPow}/mL`;
+    const planHTML = h.steps && h.steps.length
+      ? `<div class="hplan">${h.steps.map((t, k) => `<div><span class="hn">${k + 1}</span>${esc(t)}</div>`).join('')}</div>`
+      : '';
+    return `<div class="hitem">
+      <div class="htop"><span class="hname">${esc(h.name)}</span><span class="htime">${h.t}</span></div>
+      <div class="hbody">${params}${h.summary ? `<br>${esc(h.summary)}` : ''}</div>
+      ${planHTML}
+      <button class="hdel" data-i="${i}">删除</button>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('.hdel').forEach((b) => {
+    b.addEventListener('click', () => {
+      const store = loadStore();
+      store.plating.splice(+b.dataset.i, 1);
+      saveStore(store);
+      renderPlatingHistory();
+    });
+  });
+}
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+/* ============ 浓度稀释 ============ */
+const UNIT = { M: 1, mM: 1e-3, uM: 1e-6 };   // 摩尔
+const VOL = { L: 1, mL: 1e-3, uL: 1e-6 };    // 升
+const unitLabel = { M: 'M', mM: 'mM', uM: 'μM' };
+const volLabel = { L: 'L', mL: 'mL', uL: 'µL' };
+
+function bindUnitGroup(name, labelEl, LABELS) {
+  $(name + 'Group').addEventListener('change', () => {
+    const v = document.querySelector(`input[name="${name}"]:checked`).value;
+    labelEl.textContent = LABELS[v];
+  });
+}
+bindUnitGroup('dC1', $('dC1Unit'), unitLabel);
+bindUnitGroup('dC2', $('dC2Unit'), unitLabel);
+bindUnitGroup('dV1', $('dV1Unit'), volLabel);
+
+function calcDilution() {
+  const c1 = num($('dC1')), u1 = document.querySelector('input[name="dC1"]:checked').value;
+  const c2 = num($('dC2')), u2 = document.querySelector('input[name="dC2"]:checked').value;
+  const v = num($('dV1')), u3 = document.querySelector('input[name="dV1"]:checked').value;
+
+  const errs = [];
+  if (!(c1 > 0)) errs.push('原始浓度需大于 0');
+  if (!(c2 > 0)) errs.push('最终浓度需大于 0');
+  if (!(v > 0)) errs.push('溶液体积需大于 0');
+  if (errs.length) return { ok: false, msg: errs.join('；') };
+
+  const C1 = c1 * UNIT[u1], C2 = c2 * UNIT[u2], V = v * VOL[u3];
+  if (C2 > C1) return { ok: false, msg: '最终浓度高于原始浓度，需浓缩而非稀释。' };
+
+  const V1 = (C2 * V) / C1;                 // 取原液体积（L）
+  const V1uL = V1 * 1e6;
+  const totaluL = V * 1e6;
+  const solventuL = totaluL - V1uL;
+  const fold = C1 / C2;
+  return { ok: true, V1uL, totaluL, solventuL, fold, c1, u1, c2, u2, v, u3 };
+}
+
+function renderDilution(r) {
+  if (!r.ok) {
+    $('dResult').innerHTML = `<div class="res-err">${r.msg}</div>`;
+    return;
+  }
+  $('dResult').innerHTML = `
+    <div class="res-item"><span class="k">需要原液量</span>
+      <span class="v">${fmt(r.V1uL)}<small>µL</small></span></div>
+    <div class="res-item"><span class="k">稀释倍数</span>
+      <span class="v">${fmt(r.fold, 4)}<small>×</small></span></div>
+    <div class="res-item"><span class="k">需补溶剂（培养基/水）</span>
+      <span class="v">${fmt(r.solventuL)}<small>µL</small></span></div>
+    <div class="res-note">
+      ${fmt(r.c1, 4)} ${unitLabel[r.u1]} → ${fmt(r.c2, 4)} ${unitLabel[r.u2]}，定容 ${fmt(r.totaluL, 5)} µL。<br>
+      取 ${fmt(r.V1uL)} µL 原液，加溶剂至 ${fmt(r.totaluL, 5)} µL，混匀即可。
+    </div>`;
+}
+
+$('dCalc').addEventListener('click', () => {
+  const r = calcDilution();
+  renderDilution(r);
+  if (r.ok) {
+    const store = loadStore();
+    store.dilution.unshift({
+      t: nowStr(), c1: r.c1, u1: r.u1, c2: r.c2, u2: r.u2, v: r.v, u3: r.u3,
+      V1uL: r.V1uL, fold: r.fold, solventuL: r.solventuL,
+    });
+    store.dilution = store.dilution.slice(0, 30);
+    saveStore(store);
+    renderDilutionHistory();
+  } else {
+    toast('参数有误');
+  }
+});
+
+$('dReset').addEventListener('click', () => {
+  ['dC1', 'dC2', 'dV1'].forEach((id) => { $(id).value = ''; });
+  $('dResult').innerHTML = '<div class="res-placeholder">填入参数后点「计算」</div>';
+});
+
+function renderDilutionHistory() {
+  const list = loadStore().dilution;
+  const box = $('dHistory');
+  $('dHistCount').textContent = list.length;
+  if (!list.length) { box.innerHTML = '<div class="empty">还没有记录</div>'; return; }
+  box.innerHTML = list.map((h, i) => `
+    <div class="hitem">
+      <div class="htop"><span class="hname">${fmt(h.c1, 4)} ${unitLabel[h.u1]} → ${fmt(h.c2, 4)} ${unitLabel[h.u2]}</span>
+        <span class="htime">${h.t}</span></div>
+      <div class="hbody">定容 ${fmt(h.v, 4)} ${volLabel[h.u3]}（${fmt(h.v * VOL[h.u3] * 1e6, 5)} µL）<br>
+        原液 <b>${fmt(h.V1uL)} µL</b> ＋ 溶剂 ${fmt(h.solventuL)} µL，稀释 <b>${fmt(h.fold, 4)}×</b></div>
+      <button class="hdel" data-i="${i}">删除</button>
+    </div>`).join('');
+  box.querySelectorAll('.hdel').forEach((b) => {
+    b.addEventListener('click', () => {
+      const store = loadStore();
+      store.dilution.splice(+b.dataset.i, 1);
+      saveStore(store);
+      renderDilutionHistory();
+    });
+  });
+}
+
+/* ============ 平板克隆 ============ */
+let cloneMode = 'plan';
+$('cloneSeg').addEventListener('click', (e) => {
+  const b = e.target.closest('.seg-btn');
+  if (!b) return;
+  cloneMode = b.dataset.mode;
+  $('cloneSeg').querySelectorAll('.seg-btn').forEach((x) => x.classList.toggle('active', x === b));
+  $('clonePlan').hidden = cloneMode !== 'plan';
+  $('cloneEff').hidden = cloneMode !== 'eff';
+});
+
+$('clStockPowGroup').addEventListener('change', () => { $('clStockPow').textContent = checkedVal('clStock'); });
+$('ceSeedPowGroup').addEventListener('change', () => { $('ceSeedPow').textContent = checkedVal('ceSeed'); });
+
+$('clRateQuick').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (b) $('clRate').value = b.dataset.r;
+});
+
+/* —— 计划接种 —— */
+function calcPlan() {
+  const target = num($('clTarget'));
+  const rate = num($('clRate'));
+  const dishes = num($('clDishes')) || 1;
+  const dishVol = num($('clDishVol'));
+  const stock = num($('clStock'));
+  const pow = checkedVal('clStock');
+
+  const errs = [];
+  if (!(target > 0)) errs.push('目标克隆数需大于 0');
+  if (!(rate > 0 && rate <= 100)) errs.push('形成率需在 0–100% 之间');
+  if (!(stock > 0)) errs.push('原液细胞浓度需大于 0');
+  if (errs.length) return { ok: false, msg: errs.join('；') };
+
+  const cellsPerDish = target / (rate / 100);
+  const stockPerML = stock * Math.pow(10, pow);
+  const needPerDish = Math.ceil(cellsPerDish - 1e-9);          // 实际接种按整数取
+  const volPerDishML = needPerDish / stockPerML;
+  const volPerDishUL = volPerDishML * 1000;
+  const totalUL = volPerDishUL * dishes;
+  const mediumPerDishML = dishVol > 0 ? dishVol - volPerDishML : null;
+
+  if (mediumPerDishML !== null && mediumPerDishML <= 0) {
+    return {
+      ok: false,
+      msg: `每皿需 ${fmt(volPerDishUL)} µL 原液，已超过每皿体积 ${fmt(dishVol * 1000)} µL。请提高原液浓度或分次加样。`,
+    };
+  }
+  return { ok: true, target, rate, dishes, dishVol, cellsPerDish, needPerDish, volPerDishUL, volPerDishML, totalUL, mediumPerDishML, stockPerML };
+}
+
+/* 小于 1 µL 时给出预稀释建议 */
+function diluteHint(r) {
+  if (!(r.volPerDishUL > 0) || r.volPerDishUL >= 1) return '';
+  const f = Math.pow(10, Math.ceil(Math.log10(1 / r.volPerDishUL)));
+  const newVol = r.volPerDishUL * f;
+  const newConc = r.stockPerML / f;
+  return `<br><span style="color:#b06a00;">⚠ 每皿仅 ${fmt(r.volPerDishUL, 3)} µL，移液枪取不准：建议把原液稀释 ${f} 倍（至 ${fmt(newConc, 3)} /mL），每皿改加 ${fmt(newVol, 3)} µL。</span>`;
+}
+
+function renderPlan(r) {
+  if (!r.ok) { $('clPlanResult').innerHTML = `<div class="res-err">${r.msg}</div>`; return; }
+  const medLine = r.mediumPerDishML === null ? '' : `
+    <div class="res-item"><span class="k">每皿需补培养基</span>
+      <span class="v">${volTxt(r.mediumPerDishML * 1000)}</span></div>`;
+  $('clPlanResult').innerHTML = `
+    <div class="res-item"><span class="k">每皿需接种细胞数</span>
+      <span class="v">${fmt(r.needPerDish, 5)}<small>个</small></span></div>
+    <div class="res-item"><span class="k">每皿需原液</span>
+      <span class="v">${volTxt(r.volPerDishUL)}</span></div>
+    ${medLine}
+    <div class="res-item"><span class="k">${r.dishes} 皿共需原液</span>
+      <span class="v">${volTxt(r.totalUL)}</span></div>
+    <div class="res-note">
+      按形成率 ${fmt(r.rate)}% 反推：想得到 ${fmt(r.target)} 个克隆，需接种 ${fmt(r.cellsPerDish, 5)} 个细胞（取整 ${r.needPerDish} 个）。<br>
+      原液浓度 ${fmt(r.stockPerML, 4)} /mL${r.dishVol > 0 ? `，每皿定容 ${fmt(r.dishVol)} mL` : ''}。${diluteHint(r)}
+    </div>`;
+}
+
+$('clPlanCalc').addEventListener('click', () => {
+  const r = calcPlan();
+  renderPlan(r);
+  if (r.ok) {
+    addClone({ t: nowStr(), mode: 'plan', target: r.target, rate: r.rate, dishes: r.dishes,
+      needPerDish: r.needPerDish, volPerDishUL: r.volPerDishUL, totalUL: r.totalUL, mediumPerDishML: r.mediumPerDishML });
+  } else toast('参数有误');
+});
+
+$('clPlanReset').addEventListener('click', () => {
+  ['clTarget', 'clRate', 'clDishes', 'clDishVol', 'clStock'].forEach((id) => { $(id).value = ''; });
+  $('clPlanResult').innerHTML = '<div class="res-placeholder">填入参数后点「计算」</div>';
+});
+
+/* —— 测形成率 —— */
+function parseCounts(str) {
+  return String(str).split(/[,，、;；\s]+/).map((s) => parseFloat(s)).filter((v) => isFinite(v) && v >= 0);
+}
+function calcEff() {
+  const den = num($('ceSeed'));
+  const pow = checkedVal('ceSeed');
+  const counts = parseCounts($('ceCounts').value);
+  const errs = [];
+  if (!(den > 0)) errs.push('接种细胞数需大于 0');
+  if (!counts.length) errs.push('至少填一个克隆数');
+  if (errs.length) return { ok: false, msg: errs.join('；') };
+
+  const seeded = den * Math.pow(10, pow);
+  const n = counts.length;
+  const mean = counts.reduce((a, b) => a + b, 0) / n;
+  let sd = 0;
+  if (n > 1) {
+    const v = counts.reduce((a, b) => a + (b - mean) ** 2, 0) / (n - 1);
+    sd = Math.sqrt(v);
+  }
+  const pe = (mean / seeded) * 100;
+  const cv = mean > 0 ? (sd / mean) * 100 : 0;
+  return { ok: true, seeded, counts, n, mean, sd, pe, cv };
+}
+
+function renderEff(r) {
+  if (!r.ok) { $('ceResult').innerHTML = `<div class="res-err">${r.msg}</div>`; return; }
+  const each = r.counts.map((c, i) => `第${i + 1}皿 ${fmt(c, 4)}（${fmt((c / r.seeded) * 100, 3)}%）`).join('　');
+  $('ceResult').innerHTML = `
+    <div class="res-item"><span class="k">克隆形成率<button class="info" data-info="rate">i</button></span>
+      <span class="v">${fmt(r.pe, 3)}<small>%</small></span></div>
+    <div class="res-item"><span class="k">平均克隆数</span>
+      <span class="v">${fmt(r.mean, 4)}${r.n > 1 ? `<small>± ${fmt(r.sd, 3)}</small>` : ''}</span></div>
+    <div class="res-item"><span class="k">皿间变异系数</span>
+      <span class="v">${r.n > 1 ? fmt(r.cv, 3) : '—'}<small>${r.n > 1 ? '%' : ''}</small></span></div>
+    <div class="res-note">
+      接种 ${fmt(r.seeded, 4)} 个/皿，${r.n} 皿。各皿：${each}。<br>
+      ${r.cv > 20 && r.n > 1 ? '⚠ 皿间 CV 偏高（>20%），建议检查铺板均匀度或增加皿数。' : '形成率可用于下一批实验的反推接种量。'}
+    </div>`;
+}
+
+$('ceCalc').addEventListener('click', () => {
+  const r = calcEff();
+  renderEff(r);
+  if (r.ok) {
+    addClone({ t: nowStr(), mode: 'eff', seeded: r.seeded, counts: r.counts, mean: r.mean, sd: r.sd, pe: r.pe, cv: r.cv });
+  } else toast('参数有误');
+});
+
+$('ceReset').addEventListener('click', () => {
+  ['ceSeed', 'ceCounts'].forEach((id) => { $(id).value = ''; });
+  $('ceResult').innerHTML = '<div class="res-placeholder">填入参数后点「计算」</div>';
+});
+
+/* —— 记录 —— */
+function addClone(rec) {
+  const store = loadStore();
+  store.clones = store.clones || [];
+  store.clones.unshift(rec);
+  store.clones = store.clones.slice(0, 30);
+  saveStore(store);
+  renderCloneHistory();
+}
+function renderCloneHistory() {
+  const list = (loadStore().clones || []);
+  const box = $('clHistory');
+  $('clHistCount').textContent = list.length;
+  if (!list.length) { box.innerHTML = '<div class="empty">还没有记录</div>'; return; }
+  box.innerHTML = list.map((h, i) => {
+    const body = h.mode === 'plan'
+      ? `目标 ${fmt(h.target)} 克隆/皿（${fmt(h.rate)}%）→ 接种 <b>${fmt(h.needPerDish)} 个</b>，原液 <b>${fmt(h.volPerDishUL)} µL</b>${h.dishes > 1 ? `，${h.dishes} 皿共 ${fmt(h.totalUL)} µL` : ''}`
+      : `接种 ${fmt(h.seeded, 4)}/皿 → 平均 <b>${fmt(h.mean, 4)}</b> 个，形成率 <b>${fmt(h.pe, 3)}%</b>${h.counts.length > 1 ? `（${h.counts.length} 皿，CV ${fmt(h.cv, 2)}%）` : ''}`;
+    return `<div class="hitem">
+      <div class="htop"><span class="hname">${h.mode === 'plan' ? '计划接种' : '形成率'}</span><span class="htime">${h.t}</span></div>
+      <div class="hbody">${body}</div>
+      <button class="hdel" data-i="${i}">删除</button>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('.hdel').forEach((b) => {
+    b.addEventListener('click', () => {
+      const store = loadStore();
+      store.clones.splice(+b.dataset.i, 1);
+      saveStore(store);
+      renderCloneHistory();
+    });
+  });
+}
+
+
+/* ============ 名词说明弹层 ============ */
+const INFO = {
+  rate: {
+    title: '克隆形成率（Plating Efficiency）',
+    html: `
+      <p>指接种的细胞里，最终能贴壁并增殖成一个可辨识集落的比例。</p>
+      <div class="fml">克隆形成率 = 克隆数 ÷ 接种细胞数 × 100%</div>
+      <p>例：每皿接种 1000 个细胞，最后数出 300 个克隆 → 形成率 30%。</p>
+      <p><b>计数标准</b>：通常以 ≥50 个细胞的集落计为 1 个克隆；也有实验室按 ≥20 个或肉眼可见计，同一批实验内必须统一。</p>
+      <p><b>它测什么</b>：测的是「贴壁 + 完成几十次分裂成集落」的能力，比活率严格得多。台盼蓝、CCK-8 只能说明细胞还活着，可能已经失去增殖能力。</p>
+      <p><b>参考范围</b></p>
+      <ul>
+        <li>HeLa、A549 等强增殖细胞系：20–60%</li>
+        <li>多数常规细胞系：10–40%</li>
+        <li>原代细胞、难养细胞：常低于 10%</li>
+        <li>干细胞／肿瘤干细胞：常低于 1%</li>
+      </ul>
+      <p class="muted-line">它是批次相关的，换细胞株、换血清或传代次数多了都会变，建议每批实验单独实测一次，别长期沿用旧值。</p>
+      <p><b>怎么用</b>：反推接种量 = 目标克隆数 ÷ 形成率。想要 100 个克隆、形成率 30%，就接种约 334 个细胞。</p>`,
+  },
+};
+
+let maskTimer = null;
+function openSheet(key) {
+  const item = INFO[key];
+  if (!item) return;
+  $('sheetTitle').textContent = item.title;
+  $('sheetBody').innerHTML = item.html;
+  const m = $('mask');
+  clearTimeout(maskTimer);
+  m.hidden = false;
+  m.classList.add('show');
+}
+function closeSheet() {
+  const m = $('mask');
+  m.classList.remove('show');
+  m.hidden = true;
+}
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-info]')) { e.preventDefault(); openSheet(e.target.closest('[data-info]').dataset.info); }
+});
+
+/* ============ 分享 ============ */
+let lastShareText = '';
+function openShare(text) {
+  lastShareText = text;
+  $('sheetTitle').textContent = '分享给同事';
+  $('sheetBody').innerHTML = `
+    <textarea id="shareBox" class="share-box" readonly rows="10"></textarea>
+    <div class="share-actions">
+      <button id="shareCopy" class="btn primary" style="padding:12px 0;">复制文字</button>
+      <button id="shareSys" class="btn ghost" style="padding:12px 0;" hidden>系统分享</button>
+    </div>
+    <p class="muted-line" style="margin-top:10px;">粘到微信、备忘录、实验记录里都能直接看。系统分享走 iOS 分享面板。</p>`;
+  const box = $('shareBox');
+  box.value = text;
+  const m = $('mask');
+  clearTimeout(maskTimer);
+  m.hidden = false;
+  m.classList.add('show');
+
+  const copyBtn = $('shareCopy');
+  copyBtn.addEventListener('click', async () => {
+    let ok = false;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        ok = true;
+      }
+    } catch (e) {}
+    if (!ok) {
+      box.focus(); box.select(); box.setSelectionRange(0, text.length);
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    }
+    toast(ok ? '已复制，去粘贴吧' : '复制失败，请长按文本框全选复制');
+  });
+
+  const sysBtn = $('shareSys');
+  if (navigator.share) {
+    sysBtn.hidden = false;
+    sysBtn.addEventListener('click', () => {
+      navigator.share({ text }).catch(() => {});
+    });
+  }
+}
+$('sheetClose').addEventListener('click', closeSheet);
+$('mask').addEventListener('click', (e) => { if (e.target === $('mask')) closeSheet(); });
+
+/* 输入框回车直接计算 */
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  if ($('viewPlating').classList.contains('active') && e.target.classList.contains('num')) $('plCalc').click();
+  if ($('viewDilution').classList.contains('active') && e.target.classList.contains('num')) $('dCalc').click();
+});
+
+/* 初始化 */
+$('plDenPow').textContent = checkedVal('plDen');
+$('plStockPow').textContent = checkedVal('plStock');
+$('clStockPow').textContent = checkedVal('clStock');
+$('ceSeedPow').textContent = checkedVal('ceSeed');
+renderPlatingHistory();
+renderDilutionHistory();
+renderCloneHistory();
+
+</script>
+</body>
+</html>
